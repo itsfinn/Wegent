@@ -52,6 +52,7 @@ export interface AdminPublicModel {
   id: number;
   name: string;
   namespace: string;
+  display_name: string | null;
   json: Record<string, unknown>;
   is_active: boolean;
   created_at: string;
@@ -85,23 +86,55 @@ export interface SystemStats {
   total_public_models: number;
 }
 
+// Chat Slogan & Tips Types
+export type SloganTipMode = 'chat' | 'code' | 'both';
+
+export interface ChatSloganItem {
+  id: number;
+  zh: string;
+  en: string;
+  mode?: SloganTipMode;
+}
+
+export interface ChatTipItem {
+  id: number;
+  zh: string;
+  en: string;
+  mode?: SloganTipMode;
+}
+
+export interface ChatSloganTipsUpdate {
+  slogans: ChatSloganItem[];
+  tips: ChatTipItem[];
+}
+
+export interface ChatSloganTipsResponse {
+  version: number;
+  slogans: ChatSloganItem[];
+  tips: ChatTipItem[];
+}
+
 // Admin API Services
 export const adminApis = {
   // ==================== User Management ====================
 
   /**
-   * Get list of all users with pagination
+   * Get list of all users with pagination and search
    */
   async getUsers(
     page: number = 1,
     limit: number = 20,
-    includeInactive: boolean = false
+    includeInactive: boolean = false,
+    search?: string
   ): Promise<AdminUserListResponse> {
     const params = new URLSearchParams();
     params.append('page', String(page));
     params.append('limit', String(limit));
     if (includeInactive) {
       params.append('include_inactive', 'true');
+    }
+    if (search) {
+      params.append('search', search);
     }
     return apiClient.get(`/admin/users?${params.toString()}`);
   },
@@ -198,5 +231,37 @@ export const adminApis = {
    */
   async getSystemStats(): Promise<SystemStats> {
     return apiClient.get('/admin/stats');
+  },
+
+  // ==================== System Config (Quick Access) ====================
+
+  /**
+   * Get system recommended quick access configuration
+   */
+  async getQuickAccessConfig(): Promise<{ version: number; teams: number[] }> {
+    return apiClient.get('/admin/system-config/quick-access');
+  },
+
+  /**
+   * Update system recommended quick access configuration
+   */
+  async updateQuickAccessConfig(teams: number[]): Promise<{ version: number; teams: number[] }> {
+    return apiClient.put('/admin/system-config/quick-access', { teams });
+  },
+
+  // ==================== Chat Slogan & Tips Config ====================
+
+  /**
+   * Get chat slogan and tips configuration
+   */
+  async getSloganTipsConfig(): Promise<ChatSloganTipsResponse> {
+    return apiClient.get('/admin/system-config/slogan-tips');
+  },
+
+  /**
+   * Update chat slogan and tips configuration
+   */
+  async updateSloganTipsConfig(data: ChatSloganTipsUpdate): Promise<ChatSloganTipsResponse> {
+    return apiClient.put('/admin/system-config/slogan-tips', data);
   },
 };

@@ -14,7 +14,7 @@ import type {
   GitBranch,
   Attachment,
 } from '@/types/api';
-import { Copy, Share2, Link, FileText, ChevronDown } from 'lucide-react';
+import { Share2, FileText, ChevronDown, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -28,7 +28,6 @@ import { useTheme } from '@/features/theme/ThemeProvider';
 import { useTypewriter } from '@/hooks/useTypewriter';
 import { useMultipleStreamingRecovery, type RecoveryState } from '@/hooks/useStreamingRecovery';
 import MessageBubble, { type Message } from './MessageBubble';
-import AttachmentPreview from './AttachmentPreview';
 import TaskShareModal from './TaskShareModal';
 import { taskApis } from '@/apis/tasks';
 import { type SelectableMessage } from './ExportPdfButton';
@@ -55,6 +54,8 @@ interface RecoveredMessageBubbleProps {
   selectedBranch?: GitBranch | null;
   theme: 'light' | 'dark';
   t: (key: string) => string;
+  /** Generic callback when a component inside the message bubble wants to send a message */
+  onSendMessage?: (content: string) => void;
 }
 
 function RecoveredMessageBubble({
@@ -67,6 +68,7 @@ function RecoveredMessageBubble({
   selectedBranch,
   theme,
   t,
+  onSendMessage,
 }: RecoveredMessageBubbleProps) {
   // Use typewriter effect for recovered content that is still streaming
   const displayContent = useTypewriter(recovery.content || '');
@@ -90,6 +92,7 @@ function RecoveredMessageBubble({
       selectedBranch={selectedBranch}
       theme={theme}
       t={t}
+      onSendMessage={onSendMessage}
     />
   );
 }
@@ -112,6 +115,8 @@ interface MessagesAreaProps {
   onContentChange?: () => void;
   /** Current streaming subtask ID (for deduplication) */
   streamingSubtaskId?: number | null;
+  /** Generic callback when a component inside the message bubble wants to send a message */
+  onSendMessage?: (content: string) => void;
 }
 
 export default function MessagesArea({
@@ -125,6 +130,7 @@ export default function MessagesArea({
   onContentChange,
   streamingSubtaskId,
   onShareButtonRender,
+  onSendMessage,
 }: MessagesAreaProps) {
   const { t } = useTranslation('chat');
   const { t: tCommon } = useTranslation('common');
@@ -137,6 +143,7 @@ export default function MessagesArea({
   const [shareUrl, setShareUrl] = useState('');
   const [isSharing, setIsSharing] = useState(false);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const [isExportingDocx, setIsExportingDocx] = useState(false);
 
   // Use Typewriter effect for streaming content
   const displayContent = useTypewriter(streamingContent || '');
@@ -305,6 +312,47 @@ export default function MessagesArea({
       setIsExportingPdf(false);
     }
   }, [selectedTaskDetail, toast, t, tCommon, loadImageAsBase64]);
+
+  // Handle DOCX export
+  const handleExportDocx = useCallback(async () => {
+    if (!selectedTaskDetail?.id) {
+      toast({
+        variant: 'destructive',
+        title: tCommon('shared_task.no_task_selected'),
+        description: tCommon('shared_task.no_task_selected_desc'),
+      });
+      return;
+    }
+
+    setIsExportingDocx(true);
+    try {
+      // Call backend API
+      const blob = await taskApis.exportTaskDocx(selectedTaskDetail.id);
+
+      // Trigger download
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${selectedTaskDetail.title || selectedTaskDetail.prompt?.slice(0, 50) || 'Chat_Export'}_${new Date().toISOString().split('T')[0]}.docx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      toast({
+        title: t('export.docx_success') || 'DOCX exported successfully',
+      });
+    } catch (error) {
+      console.error('Failed to export DOCX:', error);
+      toast({
+        variant: 'destructive',
+        title: t('export.docx_failed') || 'Failed to export DOCX',
+        description: error instanceof Error ? error.message : 'Unknown error',
+      });
+    } finally {
+      setIsExportingDocx(false);
+    }
+  }, [selectedTaskDetail, toast, t, tCommon]);
 
   // Check if team uses Chat Shell (streaming mode, no polling needed)
   // Case-insensitive comparison since backend may return 'chat' or 'Chat'
@@ -603,61 +651,78 @@ export default function MessagesArea({
     onContentChange,
   ]);
 
-  // Memoize share button to prevent infinite re-renders
+  // Memoize share and export buttons to prevent infinite re-renders
   const shareButton = useMemo(() => {
     if (!selectedTaskDetail?.id || displayMessages.length === 0) {
       return null;
     }
 
-    const isDisabled = isSharing || isExportingPdf;
-
     return (
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={isDisabled}
-            className="flex items-center gap-2"
-          >
-            <Share2 className="h-4 w-4" />
-            {tCommon('shared_task.share_task')}
-            <ChevronDown className="h-3 w-3 ml-0.5" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-30">
-          <DropdownMenuItem
-            onClick={handleShareTask}
-            disabled={isSharing}
-            className="flex items-center gap-2 cursor-pointer"
-          >
-            <Link className="h-4 w-4" />
-            <span>
-              {isSharing ? tCommon('shared_task.sharing') : tCommon('shared_task.share_link')}
-            </span>
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={handleExportPdf}
-            disabled={isExportingPdf}
-            className="flex items-center gap-2 cursor-pointer"
-          >
-            <FileText className="h-4 w-4" />
-            <span>
-              {isExportingPdf
-                ? t('export.exporting') || 'Exporting...'
-                : tCommon('shared_task.share_pdf')}
-            </span>
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <div className="flex items-center gap-2">
+        {/* Share Button */}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleShareTask}
+          disabled={isSharing}
+          className="flex items-center gap-2"
+        >
+          <Share2 className="h-4 w-4" />
+          {isSharing ? tCommon('shared_task.sharing') : tCommon('shared_task.share_link')}
+        </Button>
+
+        {/* Export Button (Dropdown Menu) */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={isExportingPdf || isExportingDocx}
+              className="flex items-center gap-2"
+            >
+              <Download className="h-4 w-4" />
+              {t('export.export')}
+              <ChevronDown className="h-3 w-3 ml-0.5" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-30">
+            <DropdownMenuItem
+              onClick={handleExportPdf}
+              disabled={isExportingPdf}
+              className="flex items-center gap-2 cursor-pointer"
+            >
+              <FileText className="h-4 w-4" />
+              <span>
+                {isExportingPdf
+                  ? t('export.exporting') || 'Exporting...'
+                  : tCommon('shared_task.share_pdf')}
+              </span>
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={handleExportDocx}
+              disabled={isExportingDocx}
+              className="flex items-center gap-2 cursor-pointer"
+            >
+              <FileText className="h-4 w-4" />
+              <span>
+                {isExportingDocx
+                  ? t('export.exporting_docx') || 'Exporting DOCX...'
+                  : t('export.export_docx') || 'Export DOCX'}
+              </span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
     );
   }, [
     selectedTaskDetail?.id,
     displayMessages.length,
     isSharing,
     isExportingPdf,
+    isExportingDocx,
     handleShareTask,
     handleExportPdf,
+    handleExportDocx,
     t,
     tCommon,
   ]);
@@ -702,6 +767,7 @@ export default function MessagesArea({
                   selectedBranch={selectedBranch}
                   theme={theme as 'light' | 'dark'}
                   t={t}
+                  onSendMessage={onSendMessage}
                 />
               );
             }
@@ -718,50 +784,35 @@ export default function MessagesArea({
                 selectedBranch={selectedBranch}
                 theme={theme as 'light' | 'dark'}
                 t={t}
+                onSendMessage={onSendMessage}
               />
             );
           })}
 
           {/* Pending user message (optimistic update) - only show if not already in displayMessages */}
+          {/* Use MessageBubble to ensure proper rendering of special formats like ClarificationAnswerSummary */}
           {pendingUserMessage && !isPendingMessageAlreadyDisplayed && (
-            <div className="flex justify-end">
-              <div className="flex max-w-[75%] w-auto flex-col gap-3 items-end">
-                <div className="relative group w-full p-5 pb-10 rounded-2xl border border-border text-text-primary shadow-sm bg-muted">
-                  {/* Show pending attachment */}
-                  {pendingAttachment && (
-                    <div className="flex flex-wrap gap-2 mb-3">
-                      <AttachmentPreview
-                        attachment={pendingAttachment}
-                        compact={false}
-                        showDownload={false}
-                      />
-                    </div>
-                  )}
-                  <div className="text-sm break-all">{pendingUserMessage}</div>
-                  {/* Copy button for pending user message */}
-                  <div className="absolute bottom-2 left-2 flex items-center gap-1 z-10">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={async () => {
-                        try {
-                          await navigator.clipboard.writeText(pendingUserMessage);
-                        } catch (err) {
-                          console.error('Failed to copy text: ', err);
-                        }
-                      }}
-                      className="h-8 w-8 hover:bg-muted opacity-100"
-                      title="Copy"
-                    >
-                      <Copy className="h-4 w-4 text-text-muted" />
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <MessageBubble
+              key="pending-user-message"
+              msg={{
+                type: 'user',
+                content: pendingUserMessage,
+                timestamp: Date.now(),
+                attachments: pendingAttachment ? [pendingAttachment] : undefined,
+              }}
+              index={displayMessages.length}
+              selectedTaskDetail={selectedTaskDetail}
+              selectedTeam={selectedTeam}
+              selectedRepo={selectedRepo}
+              selectedBranch={selectedBranch}
+              theme={theme as 'light' | 'dark'}
+              t={t}
+              onSendMessage={onSendMessage}
+            />
           )}
 
           {/* Streaming AI response - use MessageBubble component for consistency */}
+          {/* Show waiting indicator inside MessageBubble when streaming but no content yet */}
           {(isStreaming || streamingContent) &&
             streamingContent !== undefined &&
             !isStreamingContentAlreadyDisplayed && (
@@ -784,11 +835,12 @@ export default function MessagesArea({
                 selectedBranch={selectedBranch}
                 theme={theme as 'light' | 'dark'}
                 t={t}
+                isWaiting={Boolean(isStreaming && !streamingContent)}
+                onSendMessage={onSendMessage}
               />
             )}
         </div>
       )}
-
       {/* Task Share Modal */}
       <TaskShareModal
         visible={showShareModal}

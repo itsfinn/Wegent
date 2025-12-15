@@ -106,6 +106,9 @@ class Settings(BaseSettings):
     # YAML initialization configuration
     INIT_DATA_DIR: str = "/app/init_data"
     INIT_DATA_ENABLED: bool = True
+    INIT_DATA_FORCE: bool = (
+        False  # Force re-initialize YAML resources (delete and recreate)
+    )
 
     # default header
     EXECUTOR_ENV: str = '{"DEFAULT_HEADERS":{"user":"${task_data.user.name}"}}'
@@ -127,6 +130,14 @@ class Settings(BaseSettings):
     ATTACHMENT_S3_BUCKET: str = "attachments"
     ATTACHMENT_S3_REGION: str = "us-east-1"
     ATTACHMENT_S3_USE_SSL: bool = True
+
+    # Web search configuration
+    WEB_SEARCH_ENABLED: bool = False  # Enable/disable web search feature
+    WEB_SEARCH_ENGINES: str = "{}"  # JSON configuration for search API adapter
+
+    # OpenTelemetry configuration is centralized in shared/telemetry/config.py
+    # Use: from shared.telemetry.config import get_otel_config
+    # All OTEL_* environment variables are read from there
 
     class Config:
         env_file = ".env"

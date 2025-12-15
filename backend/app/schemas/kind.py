@@ -212,6 +212,9 @@ class TeamSpec(BaseModel):
 
     members: List[TeamMember]
     collaborationModel: str  # pipeline、route、coordinate、collaborate
+    bind_mode: Optional[List[str]] = None  # ['chat', 'code'] or empty list for none
+    description: Optional[str] = None  # Team description
+    icon: Optional[str] = None  # Icon ID from preset icon library
 
 
 class TeamStatus(Status):
