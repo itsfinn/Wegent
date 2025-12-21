@@ -326,6 +326,13 @@ wegent/
         </a>
     </td>
     <td align="center">
+        <a href="https://github.com/johnny0120">
+            <img src="https://avatars.githubusercontent.com/u/15564476?v=4" width="80;" alt="johnny0120"/>
+            <br />
+            <sub><b>Johnny0120</b></sub>
+        </a>
+    </td>
+    <td align="center">
         <a href="https://github.com/2561056571">
             <img src="https://avatars.githubusercontent.com/u/112464849?v=4" width="80;" alt="2561056571"/>
             <br />
@@ -338,13 +345,6 @@ wegent/
             <br />
             <sub><b>Fengkuizhi</b></sub>
         </a>
-    </td>
-    <td align="center">
-        <a href="https://github.com/johnny0120">
-            <img src="https://avatars.githubusercontent.com/u/15564476?v=4" width="80;" alt="johnny0120"/>
-            <br />
-            <sub><b>johnny0120</b></sub>
-        </a>
     </td></tr>
 <tr>
     <td align="center">
@@ -352,6 +352,20 @@ wegent/
             <img src="https://avatars.githubusercontent.com/u/77268?v=4" width="80;" alt="jolestar"/>
             <br />
             <sub><b>Jolestar</b></sub>
+        </a>
+    </td>
+    <td align="center">
+        <a href="https://github.com/graindt">
+            <img src="https://avatars.githubusercontent.com/u/3962041?v=4" width="80;" alt="graindt"/>
+            <br />
+            <sub><b>graindt</b></sub>
+        </a>
+    </td>
+    <td align="center">
+        <a href="https://github.com/itsfinn">
+            <img src="https://avatars.githubusercontent.com/u/39669621?v=4" width="80;" alt="itsfinn"/>
+            <br />
+            <sub><b>Itsfinn</b></sub>
         </a>
     </td></tr>
 </table>
