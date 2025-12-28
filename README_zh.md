@@ -358,7 +358,7 @@ wegent/
         <a href="https://github.com/graindt">
             <img src="https://avatars.githubusercontent.com/u/3962041?v=4" width="80;" alt="graindt"/>
             <br />
-            <sub><b>graindt</b></sub>
+            <sub><b>Graindt</b></sub>
         </a>
     </td>
     <td align="center">
