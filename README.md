@@ -327,7 +327,7 @@ Thanks to the following developers for their contributions and efforts to make t
         <a href="https://github.com/johnny0120">
             <img src="https://avatars.githubusercontent.com/u/15564476?v=4" width="80;" alt="johnny0120"/>
             <br />
-            <sub><b>johnny0120</b></sub>
+            <sub><b>Johnny0120</b></sub>
         </a>
     </td>
     <td align="center">
@@ -356,7 +356,7 @@ Thanks to the following developers for their contributions and efforts to make t
         <a href="https://github.com/graindt">
             <img src="https://avatars.githubusercontent.com/u/3962041?v=4" width="80;" alt="graindt"/>
             <br />
-            <sub><b>graindt</b></sub>
+            <sub><b>Graindt</b></sub>
         </a>
     </td>
     <td align="center">
